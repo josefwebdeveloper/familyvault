@@ -21,12 +21,10 @@ service cloud.firestore {
         get(/databases/$(database)/documents/vaults/$(vaultId)).data.ownerId == request.auth.uid;
     }
 
-    // User profiles — own read/write only
     match /users/{userId} {
       allow read, write: if isOwner(userId);
     }
 
-    // Vaults — members can read, owner can write vault metadata
     match /vaults/{vaultId} {
       allow read: if isAuthenticated() &&
         request.auth.uid in resource.data.memberIds;
@@ -36,13 +34,11 @@ service cloud.firestore {
       allow update: if isVaultMember(vaultId);
       allow delete: if isVaultOwner(vaultId);
 
-      // Vault members subcollection
       match /members/{memberId} {
         allow read: if isVaultMember(vaultId);
         allow write: if isVaultOwner(vaultId);
       }
 
-      // Vault items — members can read/write
       match /items/{itemId} {
         allow read: if isVaultMember(vaultId);
         allow create, update: if isVaultMember(vaultId);
@@ -50,7 +46,6 @@ service cloud.firestore {
       }
     }
 
-    // Deny all other access
     match /{document=**} {
       allow read, write: if false;
     }
