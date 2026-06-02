@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #020617;
+  --foreground: #e2e8f0;
+  --card: #0f172a;
+  --border: #1e293b;
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --warning: #f97316;
+  --danger: #ef4444;
 }
 
 @theme inline {
@@ -12,15 +18,50 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.input {
+  @apply w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition;
+}
+
+.btn-primary {
+  @apply px-4 py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition text-sm font-medium disabled:opacity-50;
+}
+
+.btn-secondary {
+  @apply px-4 py-2.5 rounded-lg bg-slate-700 text-slate-200 hover:bg-slate-600 transition text-sm;
+}
+
+.card {
+  @apply rounded-xl border border-slate-700 bg-slate-800/50 p-5;
+}
+
+@keyframes slide-in-from-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-in {
+  animation: slide-in-from-right 0.3s ease-out;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+  }
+}
+
+[data-theme="dark"] {
+  --background: #020617;
+  --foreground: #e2e8f0;
+}
+
+[data-theme="light"] {
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
