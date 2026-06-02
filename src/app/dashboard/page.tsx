@@ -1,13 +1,15 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { UnlockedGuard } from "@/components/providers/VaultGuard";
 import { SecurityScoreCard } from "@/components/dashboard/SecurityScoreCard";
 import { PasswordDetoxCard } from "@/components/dashboard/PasswordDetoxCard";
 import { VaultCard } from "@/components/vault/VaultCard";
+import { AddItemModal } from "@/components/vault/AddItemModal";
 import { useVaultStore } from "@/stores/vault-store";
 import { calculateSecurityScore } from "@/lib/security/analysis";
+import Link from "next/link";
 
 export default function DashboardPage() {
   return (
@@ -22,6 +24,7 @@ export default function DashboardPage() {
 function DashboardContent() {
   const { items, vaults } = useVaultStore();
   const breakdown = calculateSecurityScore(items);
+  const [showAdd, setShowAdd] = useState(false);
 
   const getVaultWarnings = (vaultId: string) =>
     items.filter((i) => i.vaultId === vaultId && i.riskStatus !== "secure").length;
@@ -34,7 +37,10 @@ function DashboardContent() {
           <p className="text-sm text-slate-400">Your family security overview</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/vaults" className="btn-secondary text-xs">Add Account</Link>
+          <button onClick={() => setShowAdd(true)} className="btn-secondary text-xs">
+            Add Account
+          </button>
+          <Link href="/import" className="btn-secondary text-xs">Import from Chrome</Link>
           <Link href="/detox" className="btn-primary text-xs">Start Password Detox</Link>
         </div>
       </div>
@@ -61,25 +67,41 @@ function DashboardContent() {
       <section>
         <h2 className="text-lg font-semibold text-slate-200 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { href: "/vaults", label: "Add Account", icon: "➕" },
-            { href: "/vaults", label: "Generate Password", icon: "🔑" },
-            { href: "/detox", label: "Password Detox", icon: "🔄" },
-            { href: "/vaults", label: "Secure Note", icon: "📝" },
-            { href: "/vaults", label: "Recovery Codes", icon: "🔐" },
-            { href: "/backup", label: "Export Backup", icon: "💾" },
-          ].map((action) => (
-            <Link
-              key={action.label}
-              href={action.href}
-              className="card flex flex-col items-center gap-2 py-4 hover:border-emerald-500/50 transition text-center"
-            >
-              <span className="text-2xl">{action.icon}</span>
-              <span className="text-xs text-slate-300">{action.label}</span>
-            </Link>
-          ))}
+          {(
+            [
+              { type: "button" as const, action: () => setShowAdd(true), label: "Add Account", icon: "➕" },
+              { type: "link" as const, href: "/import", label: "Import Chrome", icon: "📥" },
+              { type: "link" as const, href: "/detox", label: "Password Detox", icon: "🔄" },
+              { type: "link" as const, href: "/vaults", label: "All vaults", icon: "🔐" },
+              { type: "link" as const, href: "/backup", label: "Export Backup", icon: "💾" },
+              { type: "link" as const, href: "/extension/fill", label: "Autofill helper", icon: "⚡" },
+            ] as const
+          ).map((action) =>
+            action.type === "link" ? (
+              <Link
+                key={action.label}
+                href={action.href}
+                className="card flex flex-col items-center gap-2 py-4 hover:border-emerald-500/50 transition text-center"
+              >
+                <span className="text-2xl">{action.icon}</span>
+                <span className="text-xs text-slate-300">{action.label}</span>
+              </Link>
+            ) : (
+              <button
+                key={action.label}
+                type="button"
+                onClick={action.action}
+                className="card flex flex-col items-center gap-2 py-4 hover:border-emerald-500/50 transition text-center w-full"
+              >
+                <span className="text-2xl">{action.icon}</span>
+                <span className="text-xs text-slate-300">{action.label}</span>
+              </button>
+            )
+          )}
         </div>
       </section>
+
+      <AddItemModal open={showAdd} onClose={() => setShowAdd(false)} />
     </div>
   );
 }

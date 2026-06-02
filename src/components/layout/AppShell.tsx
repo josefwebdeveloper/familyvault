@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/detox", label: "Password Detox", icon: "🔄" },
   { href: "/security", label: "Security Health", icon: "🛡️" },
   { href: "/backup", label: "Backup", icon: "💾" },
+  { href: "/import", label: "Import", icon: "📥" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 

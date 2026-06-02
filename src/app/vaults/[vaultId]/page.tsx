@@ -9,10 +9,9 @@ import { ItemForm, type ItemFormData } from "@/components/vault/ItemForm";
 import { EmptyState } from "@/components/ui/States";
 import { ConfirmDialog } from "@/components/ui/States";
 import { useVaultStore } from "@/stores/vault-store";
-import { saveVaultItem, deleteVaultItem } from "@/lib/firebase/firestore";
-import { encryptItemSecrets } from "@/lib/vault/service";
-import { computeRiskStatus, detectReuseGroups } from "@/lib/security/analysis";
-import type { DecryptedVaultItem, ItemCategory } from "@/types";
+import { deleteVaultItem } from "@/lib/firebase/firestore";
+import { saveItemFromForm } from "@/lib/vault/save-item";
+import type { DecryptedVaultItem } from "@/types";
 import { toast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/components/vault/ItemViews";
 
@@ -71,67 +70,23 @@ function VaultDetailContent() {
     return result;
   }, [vaultItems, search, categoryFilter, sortBy]);
 
-  const handleSave = useCallback(async (data: ItemFormData) => {
+  const handleSave = useCallback(async (data: ItemFormData, options?: { isAutoSave?: boolean }) => {
     if (!vaultKey) throw new Error("Vault locked");
 
-    const secrets = {
-      password: data.password,
-      notes: data.notes,
-      backupCodes: data.backupCodes,
-    };
-
-    const { encryptedPayloadBase64, ivBase64 } = await encryptItemSecrets(secrets, vaultKey);
-    const now = new Date().toISOString();
-
-    const metadata = {
-      title: data.title,
-      url: data.url,
-      username: data.username,
-      category: data.category as ItemCategory,
-      ownerLabel: data.ownerLabel,
-      importance: data.importance,
-      riskStatus: "secure" as const,
-      securityChecklist: {
-        twoFactorEnabled: data.twoFactorEnabled,
-        passkeyEnabled: data.passkeyEnabled,
-        recoveryEmailChecked: data.recoveryEmailChecked,
-        recoveryPhoneChecked: data.recoveryPhoneChecked,
-        backupCodesSaved: data.backupCodesSaved,
-      },
-      encryptedPayloadBase64,
-      ivBase64,
-      passwordChangedAt: data.passwordChangedAt,
-      createdAt: editingItem?.createdAt ?? now,
-      updatedAt: now,
-      id: editingItem?.id,
-    };
-
-    const itemId = await saveVaultItem(data.vaultId, metadata);
-
-    const decryptedItem: DecryptedVaultItem = {
-      ...metadata,
-      id: itemId,
-      vaultId: data.vaultId,
-      secrets,
-      riskStatus: "secure",
-    };
-
-    const allItems = editingItem
-      ? items.map((i) => (i.id === itemId ? decryptedItem : i))
-      : [...items, decryptedItem];
-
-    const reuseGroups = detectReuseGroups(allItems);
-    decryptedItem.riskStatus = computeRiskStatus(decryptedItem, reuseGroups);
+    const saved = await saveItemFromForm(data, vaultKey, editingItem, items);
 
     if (editingItem) {
-      updateItem(decryptedItem);
+      updateItem(saved);
     } else {
-      addItem(decryptedItem);
+      addItem(saved);
+      setEditingItem(saved);
     }
 
-    setShowForm(false);
-    setEditingItem(undefined);
-    toast("Item saved securely", "success");
+    if (!options?.isAutoSave) {
+      setShowForm(false);
+      setEditingItem(undefined);
+      toast("Item saved securely", "success");
+    }
   }, [vaultKey, editingItem, items, addItem, updateItem]);
 
   const handleDelete = async () => {
@@ -211,12 +166,16 @@ function VaultDetailContent() {
             <h3 className="text-lg font-semibold text-slate-100 mb-4">
               {editingItem ? "Edit Item" : "Add Item"}
             </h3>
+            {!editingItem && (
+              <p className="text-xs text-slate-400 mb-3 -mt-2">Auto-saves as you type</p>
+            )}
             <ItemForm
               vaults={vaults}
               item={editingItem}
               defaultVaultId={vaultId}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingItem(undefined); }}
+              autoSave
             />
           </div>
         </div>

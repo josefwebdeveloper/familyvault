@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "FamilyVault Autofill",
+  "version": "0.1.0",
+  "description": "Fill login forms from your FamilyVault (requires unlocked vault)",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "FamilyVault Fill"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

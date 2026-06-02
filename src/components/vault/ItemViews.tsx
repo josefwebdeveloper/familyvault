@@ -5,6 +5,7 @@ import type { DecryptedVaultItem, Vault, ItemCategory, OwnerLabel, Importance } 
 import { CATEGORY_LABELS } from "@/types";
 import { RiskBadge, CategoryBadge, ImportanceBadge } from "@/components/ui/Badges";
 import { RevealSecretButton, CopyButton } from "@/components/ui/CopyButton";
+import { UseOnSiteButton } from "@/components/vault/UseOnSiteButton";
 import { formatRelativeDate } from "@/lib/utils";
 
 interface ItemCardProps {
@@ -111,7 +112,8 @@ export function ItemTable({ items, onEdit, onDelete }: ItemTableProps) {
                 <RiskBadge status={item.riskStatus} />
               </td>
               <td className="py-3">
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-1">
+                  <UseOnSiteButton item={item} compact />
                   {item.secrets.password && (
                     <CopyButton value={item.secrets.password} label="Password" />
                   )}

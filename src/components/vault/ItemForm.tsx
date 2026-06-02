@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { DecryptedVaultItem, Vault, ItemCategory, OwnerLabel, Importance } from "@/types";
 import { PasswordGenerator } from "@/components/PasswordGenerator";
 import { assessPasswordStrength } from "@/lib/crypto";
@@ -11,8 +11,9 @@ interface ItemFormProps {
   vaults: Vault[];
   item?: DecryptedVaultItem;
   defaultVaultId?: string;
-  onSave: (data: ItemFormData) => Promise<void>;
+  onSave: (data: ItemFormData, options?: { isAutoSave?: boolean }) => Promise<void>;
   onCancel: () => void;
+  autoSave?: boolean;
 }
 
 export interface ItemFormData {
@@ -35,7 +36,16 @@ export interface ItemFormData {
   remindRotation: boolean;
 }
 
-export function ItemForm({ vaults, item, defaultVaultId, onSave, onCancel }: ItemFormProps) {
+type SaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
+
+export function ItemForm({
+  vaults,
+  item,
+  defaultVaultId,
+  onSave,
+  onCancel,
+  autoSave = true,
+}: ItemFormProps) {
   const [form, setForm] = useState<ItemFormData>({
     title: item?.title ?? "",
     url: item?.url ?? "",
@@ -57,13 +67,57 @@ export function ItemForm({ vaults, item, defaultVaultId, onSave, onCancel }: Ite
   });
   const [showGenerator, setShowGenerator] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState("");
+  const skipNextAutoSave = useRef(true);
+  const formRef = useRef(form);
+  formRef.current = form;
 
   const strength = form.password ? assessPasswordStrength(form.password) : null;
 
   const update = <K extends keyof ItemFormData>(key: K, value: ItemFormData[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
+    if (autoSave) setSaveStatus("pending");
   };
+
+  const persist = useCallback(
+    async (isAutoSave: boolean) => {
+      const data = formRef.current;
+      if (!data.title.trim()) return;
+
+      setSaving(true);
+      setSaveStatus("saving");
+      setError("");
+      try {
+        await onSave(data, { isAutoSave });
+        setSaveStatus("saved");
+      } catch {
+        setSaveStatus("error");
+        if (!isAutoSave) setError("Failed to save item");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [onSave]
+  );
+
+  useEffect(() => {
+    if (!autoSave) return;
+    if (skipNextAutoSave.current) {
+      skipNextAutoSave.current = false;
+      return;
+    }
+    if (!form.title.trim()) {
+      setSaveStatus("idle");
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      persist(true);
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [form, autoSave, persist]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,19 +125,33 @@ export function ItemForm({ vaults, item, defaultVaultId, onSave, onCancel }: Ite
       setError("Title is required");
       return;
     }
-    setSaving(true);
-    setError("");
-    try {
-      await onSave(form);
-    } catch {
-      setError("Failed to save item");
-    } finally {
-      setSaving(false);
-    }
+    await persist(false);
   };
+
+  const statusLabel = {
+    idle: autoSave ? "Type to auto-save" : "",
+    pending: "Will save…",
+    saving: "Saving…",
+    saved: "✓ Saved automatically",
+    error: "Save failed — try again",
+  }[saveStatus];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+      {autoSave && (
+        <div
+          className={`text-xs px-3 py-2 rounded-lg border ${
+            saveStatus === "saved"
+              ? "bg-emerald-900/20 border-emerald-700 text-emerald-300"
+              : saveStatus === "error"
+                ? "bg-red-900/20 border-red-800 text-red-300"
+                : "bg-slate-900/50 border-slate-700 text-slate-400"
+          }`}
+        >
+          {statusLabel}
+        </div>
+      )}
+
       {error && (
         <div className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg p-3">
           {error}
@@ -97,6 +165,7 @@ export function ItemForm({ vaults, item, defaultVaultId, onSave, onCancel }: Ite
             onChange={(e) => update("title", e.target.value)}
             className="input"
             required
+            placeholder="e.g. Bringoz Console"
           />
         </Field>
         <Field label="URL">
@@ -235,15 +304,17 @@ export function ItemForm({ vaults, item, defaultVaultId, onSave, onCancel }: Ite
           onClick={onCancel}
           className="flex-1 py-2.5 rounded-lg bg-slate-700 text-slate-200 hover:bg-slate-600 transition text-sm"
         >
-          Cancel
+          {autoSave && saveStatus === "saved" ? "Done" : "Cancel"}
         </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition text-sm disabled:opacity-50"
-        >
-          {saving ? "Saving..." : item ? "Update Item" : "Save Item"}
-        </button>
+        {!autoSave && (
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition text-sm disabled:opacity-50"
+          >
+            {saving ? "Saving..." : item ? "Update Item" : "Save Item"}
+          </button>
+        )}
       </div>
     </form>
   );

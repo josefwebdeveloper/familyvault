@@ -8,6 +8,7 @@ import { LoadingState } from "@/components/ui/States";
 
 const PUBLIC_PATHS = ["/"];
 const AUTH_PATHS = ["/onboarding", "/unlock"];
+const LOCK_OPTIONAL_PATHS = ["/extension/fill"];
 
 export function VaultGuard({ children }: { children: React.ReactNode }) {
   const { user, isAuthLoading } = useAuthStore();
@@ -27,7 +28,7 @@ export function VaultGuard({ children }: { children: React.ReactNode }) {
       checkAndRedirect(user.uid);
     }
 
-    if (user && !isUnlocked && !PUBLIC_PATHS.includes(pathname) && !AUTH_PATHS.includes(pathname)) {
+    if (user && !isUnlocked && !PUBLIC_PATHS.includes(pathname) && !AUTH_PATHS.includes(pathname) && !LOCK_OPTIONAL_PATHS.includes(pathname)) {
       router.replace("/unlock");
     }
   }, [user, isAuthLoading, isUnlocked, pathname, router]);

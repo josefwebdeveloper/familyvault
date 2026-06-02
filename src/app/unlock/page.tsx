@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore, useVaultStore } from "@/stores/vault-store";
 import { getUserProfile, getUserVaults, getAllUserItems } from "@/lib/firebase/firestore";
 import { unlockVaultWithPassword, decryptAllItems } from "@/lib/vault/service";
 
-export default function UnlockPage() {
+function UnlockForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,6 +14,8 @@ export default function UnlockPage() {
   const { user } = useAuthStore();
   const { setUnlocked, setUserProfile, setVaults, setItems } = useVaultStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/dashboard";
 
   useEffect(() => {
     async function checkProfile() {
@@ -58,7 +60,7 @@ export default function UnlockPage() {
       setItems(items);
       setUnlocked(vaultKey);
       setPassword("");
-      router.push("/dashboard");
+      router.push(redirect.startsWith("/") ? redirect : "/dashboard");
     } catch {
       setError("Incorrect master password. Please try again.");
       setPassword("");
@@ -124,5 +126,17 @@ export default function UnlockPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function UnlockPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <UnlockForm />
+    </Suspense>
   );
 }
