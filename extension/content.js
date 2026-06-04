@@ -1,5 +1,16 @@
 const APP_ORIGIN = "https://familyvault-eight.vercel.app";
 
+function setNativeValue(el, value) {
+  const proto = el instanceof HTMLTextAreaElement
+    ? HTMLTextAreaElement.prototype
+    : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+  if (setter) setter.call(el, value);
+  else el.value = value;
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 function fillLogin(username, password) {
   const selectors = [
     'input[type="email"]',
@@ -17,15 +28,11 @@ function fillLogin(username, password) {
 
   if (userField && username) {
     userField.focus();
-    userField.value = username;
-    userField.dispatchEvent(new Event("input", { bubbles: true }));
-    userField.dispatchEvent(new Event("change", { bubbles: true }));
+    setNativeValue(userField, username);
   }
   if (passField && password) {
     passField.focus();
-    passField.value = password;
-    passField.dispatchEvent(new Event("input", { bubbles: true }));
-    passField.dispatchEvent(new Event("change", { bubbles: true }));
+    setNativeValue(passField, password);
   }
 }
 
